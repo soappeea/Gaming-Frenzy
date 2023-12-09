@@ -2,19 +2,24 @@
 // File Name: Game1.cs
 // Project Name: PASS3
 // Creation Date: November 30, 2023
-// Modified Date: November 30, 2023
+// Modified Date: December 9, 2023, 2023
 // Description: Platformer with minigames inside
+//TODO: CREATE MAP BY DESIGNING PLATFORMS
+//CREATE MINIGAME #1
+
 using GameUtility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using Microsoft.Xna.Framework.Content;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 
 namespace PASS3
 {
@@ -39,7 +44,46 @@ namespace PASS3
         const int GAMEOVER = 5;
 
         //Track the current game state
-        int gameState = MENU;
+        int gameState = GAMEPLAY;
+
+        //Arrays for backgrounds
+        const int MENU_BG = 0;
+        const int MAIN_GAME_BG = 1;
+        const int TRICK_TREAT_BG = 2;
+        const int SKEW_BG = 2;
+        const int AVALANCHE_BG = 3;
+        const int SCAVENGER_BG = 4;
+        const int HIGHSCORE_BG = 5;
+        const int ENDGAME_BG = 6;
+        const int INSTRUCTIONS_BG = 7;
+
+        //Backgrounds
+        Texture2D[] bgImgs = new Texture2D[8];
+        Rectangle[] bgRecs = new Rectangle[8];
+
+        //Arrays for button data
+        const int PLAYBTN = 0;
+        const int INSTBTN = 1;
+        const int HIGHSCOREBTN = 2;
+        const int EXITBTN = 3;
+        const int BACKBTN = 4;
+        const int MENUBTN = 5;
+
+        //Define buttons
+        Button[] btns = new Button[6];
+        Texture2D[] btnImgs = new Texture2D[6];
+
+        //Store the platforms
+        Texture2D snowBlockImg;
+        
+        private List<GameObject> gameObjects = new List<GameObject>();
+
+        //Different types of rebound scalers
+        private float PLATFORM_REBOUND = -0.8f;
+
+
+        //Store player animations
+        Player player = new Player(new Vector2(0, 0));
 
         //Input States for Keyboard and Mouse
         KeyboardState prevKb;
@@ -47,6 +91,11 @@ namespace PASS3
         MouseState prevMouse;
         MouseState mouse;
 
+        ////Store the basic player data //idk if im gonna do camedra anymore so idk if i need below
+        //Texture2D playerImg;
+        //Rectangle playerRec;        //This is the player's position within the whole world
+        //Vector2 playerPos;
+        //Vector2 playerScreenLoc;    //This is the player's position relative to the screen only
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -61,7 +110,8 @@ namespace PASS3
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            IsMouseVisible = true;
+
             //Setup screen dimensions
             this.graphics.PreferredBackBufferHeight = 900;
             this.graphics.PreferredBackBufferWidth = 1700;
@@ -84,7 +134,35 @@ namespace PASS3
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
+            // TODO: use this.Content to load your game content here///
+            bgImgs[MENU_BG] = Content.Load<Texture2D>("Images/Backgrounds/MainBg");
+            bgRecs[MENU_BG] = new Rectangle(0, 0, screenWidth, screenHeight);
+            bgImgs[MAIN_GAME_BG] = Content.Load<Texture2D>("Images/Backgrounds/GameBg");
+            bgRecs[MAIN_GAME_BG] = new Rectangle(0, 0, screenWidth, screenHeight);
+
+            //Load button texture
+            btnImgs[PLAYBTN] = Content.Load<Texture2D>("Images/Sprites/BtnPlay");
+            btnImgs[INSTBTN] = Content.Load<Texture2D>("Images/Sprites/BtnInst");
+            btnImgs[HIGHSCOREBTN] = Content.Load<Texture2D>("Images/Sprites/BtnHighscore");
+            btnImgs[EXITBTN] = Content.Load<Texture2D>("Images/Sprites/BtnExit");
+            btnImgs[BACKBTN] = Content.Load<Texture2D>("Images/Sprites/BtnBack");
+
+            //Create button
+            btns[PLAYBTN] = new Button(btnImgs[PLAYBTN], new Rectangle((screenWidth / 2) - (btnImgs[PLAYBTN].Width / 2), 300, btnImgs[PLAYBTN].Width, btnImgs[PLAYBTN].Height), Color.Gray);
+            btns[INSTBTN] = new Button(btnImgs[INSTBTN], new Rectangle((screenWidth / 2) - (btnImgs[INSTBTN].Width / 2), 400, btnImgs[INSTBTN].Width, btnImgs[INSTBTN].Height), Color.Gray);
+            btns[HIGHSCOREBTN] = new Button(btnImgs[HIGHSCOREBTN], new Rectangle((screenWidth / 2) - (btnImgs[HIGHSCOREBTN].Width / 2), 500, btnImgs[HIGHSCOREBTN].Width, btnImgs[HIGHSCOREBTN].Height), Color.Gray);
+            btns[EXITBTN] = new Button(btnImgs[EXITBTN], new Rectangle((screenWidth / 2) - (btnImgs[EXITBTN].Width / 2), 600, btnImgs[EXITBTN].Width, btnImgs[EXITBTN].Height), Color.Gray);
+            btns[BACKBTN] = new Button(btnImgs[BACKBTN], new Rectangle(50, 800, btnImgs[BACKBTN].Width, btnImgs[BACKBTN].Height), Color.Gray);
+
+            //Load GameObjects
+            snowBlockImg = Content.Load<Texture2D>("Images/Sprites/Snow Block 2");
+
+            //Create platforms in game //each snow block's dimensions are 51x48 (48 is vertical)
+            gameObjects.Add(new Platform(snowBlockImg, 3, 0.25f, 0, 852, true, PLATFORM_REBOUND));
+            gameObjects.Add(new Platform(snowBlockImg, 3, 0.25f, 306, 852, true, PLATFORM_REBOUND));
+            gameObjects.Add(new Platform(snowBlockImg, 3, 0.25f, 500, 775, true, PLATFORM_REBOUND));
+
+            player.LoadAnims("PlayerAnims.csv", Content);
         }
 
         /// <summary>
@@ -117,13 +195,13 @@ namespace PASS3
             switch (gameState)
             {
                 case MENU:
-                    UpdateMenu();
+                    UpdateMenu(mouse);
                     break;
                 case INSTRUCTIONS:
-                    UpdateInstructions();
+                    UpdateInstructions(mouse);
                     break;
                 case HIGHSCORES:
-                    UpdateHighscores();
+                    UpdateHighscores(mouse);
                     break;
                 case GAMEPLAY:
                     UpdateGame(gameTime);
@@ -158,7 +236,6 @@ namespace PASS3
                 case HIGHSCORES:
                     DrawHighscores();
                     break;
-                    break;
                 case GAMEPLAY:
                     DrawGame();
                     break;
@@ -177,105 +254,73 @@ namespace PASS3
         //Pre: None
         //Post: None
         //Desc: Handle input in the menu
-        private void UpdateMenu()
+        private void UpdateMenu(MouseState mouse)
         {
-            //Change to the next screen state or exit if a button is pressed
-            if (mouse.LeftButton == ButtonState.Pressed && prevMouse.LeftButton != ButtonState.Pressed)
+            //Update each button so it can check its new status relative to the mouse state
+            for (int i = 0; i <= EXITBTN; i++)
             {
-                //Change to the play or instruction or highscore screen or exit the game
-                //if (btnRecs[PLAYBTN].Contains(mouse.Position))
-                //{
-                //    //Change the screen to the mode selection screen
-                //    gameState = GAMEPLAY;
+                btns[i].Update(mouse);
+            }
+
+            //Change to play or instruction or highscore screen or exit the game
+            if (btns[PLAYBTN].IsHovered() && mouse.LeftButton == ButtonState.Pressed)
+            {
+                //Change the screen to the gameplay screen
+                gameState = GAMEPLAY;
+
                 //    buttonClickSnd.CreateInstance().Play();
 
                 //    //Reset the stats from the previous game
                 //    ResetGame();
-                //}
-                //else if (btnRecs[INSTBTN].Contains(mouse.Position))
-                //{
-                //    //Change the screen to the instruction screen
-                //    gameState = INSTRUCTIONS;
-                //    buttonClickSnd.CreateInstance().Play();
-                //}
-                //else if (btnRecs[HIGHSCOREBTN].Contains(mouse.Position))
-                //{
-                //    //Change the screen to the highscore screen
-                //    gameState = HIGHSCORES;
-                //    buttonClickSnd.CreateInstance().Play();
-                //}
-                //else if (btnRecs[EXITBTN].Contains(mouse.Position))
-                //{
-                //    //Exit the game
-                //    Exit();
-                //}
             }
+            else if (btns[INSTBTN].IsHovered() && mouse.LeftButton == ButtonState.Pressed)
+            {
+                //Change the screen to the instructions screen
+                gameState = INSTRUCTIONS;
+                //    buttonClickSnd.CreateInstance().Play();
+            }
+            else if (btns[HIGHSCOREBTN].IsHovered() && mouse.LeftButton == ButtonState.Pressed)
+            {
+                //Change the screen to the highscore screen
+                gameState = HIGHSCORES;
+                //    buttonClickSnd.CreateInstance().Play();
+            }
+            else if (btns[EXITBTN].IsHovered() && mouse.LeftButton == ButtonState.Pressed)
+            {
+                //Exit the game
+                Exit();
+            }    
         }
 
         //Pre: None
         //Post: None
         //Desc: Handle input in the instructions screen
-        private void UpdateInstructions()
+        private void UpdateInstructions(MouseState mouse)
         {
-            //Change to another screen if a button is pressed
-            if (mouse.LeftButton == ButtonState.Pressed && prevMouse.LeftButton != ButtonState.Pressed)
+            btns[BACKBTN].Update(mouse);
+
+            //Change to menu screen
+            if (btns[BACKBTN].IsHovered() && mouse.LeftButton == ButtonState.Pressed)
             {
-                ////Change to menu screen if back button is pressed 
-                //if (btnRecs[BACKBTN].Contains(mouse.Position))
-                //{
-                //    //Change the screen to the menu screen
-                //    gameState = MENU;
+                //Change the screen to the menu screen
+                gameState = MENU;
                 //    buttonClickSnd.CreateInstance().Play();
-                //}
             }
         }
 
         //Pre: None
         //Post: None
         //Desc: Handle input in the highscores screen
-        private void UpdateHighscores()
+        private void UpdateHighscores(MouseState mouse)
         {
-            //Change to another screen if a button is pressed
-            if (mouse.LeftButton == ButtonState.Pressed && prevMouse.LeftButton != ButtonState.Pressed)
+            btns[BACKBTN].Update(mouse);
+
+            //Change to menu screen
+            if (btns[BACKBTN].IsHovered() && mouse.LeftButton == ButtonState.Pressed)
             {
-                ////Change to menu screen if back button is pressed
-                //if (btnRecs[BACKBTN].Contains(mouse.Position))
-                //{
-                //    //Change the screen to the menu screen
-                //    gameState = MENU;
+                //Change the screen to the menu screen
+                gameState = MENU;
                 //    buttonClickSnd.CreateInstance().Play();
-                //}
-            }
-        }
-
-        //Pre: None
-        //Post: None
-        //Desc: Handle input in the mode selections screen
-        private void UpdateModes()
-        {
-            //Change to another screen if a button is pressed
-            if (mouse.LeftButton == ButtonState.Pressed && prevMouse.LeftButton != ButtonState.Pressed)
-            {
-                ////Change the screen to the game or menu screen based on the button pressed
-                //if (btnRecs[EASYBTN].Contains(mouse.Position))
-                //{
-                //    //Change the screen to the game screen
-                //    gameState = GAMEPLAY;
-                //    buttonClickSnd.CreateInstance().Play();
-
-                //    //Start the game timer
-                //    gameTimer.ResetTimer(true);
-
-                //    //Play game music
-                //    MediaPlayer.Stop();
-                //    MediaPlayer.Play(gameMusic);
-                //}
-                //else if (btnRecs[BACKBTN].Contains(mouse.Position))
-                //{
-                //    //Change the screen to the menu screen
-                //    gameState = MENU;
-                //    buttonClickSnd.CreateInstance().Play();
-                //}
             }
         }
 
@@ -293,6 +338,8 @@ namespace PASS3
             ////Update timers
             //doorTimer.Update(gameTime.ElapsedGameTime.TotalMilliseconds);
 
+            player.Update(gameTime, mouse, prevMouse, kb, prevKb, gameObjects, GraphicsDevice);
+
             //Change to the pause screen if p key is pressed or change to gameover if player loses all health
             if (kb.IsKeyDown(Keys.P) && !prevKb.IsKeyDown(Keys.P))
             {
@@ -300,17 +347,17 @@ namespace PASS3
                 gameState = PAUSE;
 
                 //Pause music
-                MediaPlayer.Pause();
+                //MediaPlayer.Pause();
             }
-            //else if (health <= 0)
-            //{
-            //    gameState = GAMEOVER;
-            //    gameTimer.IsPaused();
+            else if (player.GetPlayerHealth() <= 0)
+            {
+                gameState = GAMEOVER;
+                //gameTimer.IsPaused();
 
-            //    //Play game over music
-            //    MediaPlayer.Stop();
-            //    MediaPlayer.Play(gameoverMusic);
-            //}
+                ////Play game over music
+                //MediaPlayer.Stop();
+                //MediaPlayer.Play(gameoverMusic);
+            }
 
             ////Trigger the player's attack if the player clicks
             //if (mouse.LeftButton == ButtonState.Pressed && prevMouse.LeftButton != ButtonState.Pressed && isClicked == false)
@@ -320,85 +367,6 @@ namespace PASS3
 
             //    //Reset the attack timer
             //    attackTimer.ResetTimer(true);
-            //}
-
-            //////Update the player's speed based on input////
-            ////Check for right and left input to accelerate the player in the chosen direction
-            //if (kb.IsKeyDown(Keys.Right) || kb.IsKeyDown(Keys.D))
-            //{
-            //    //Change player's direction, state, and animation
-            //    dir = POS;
-            //    playerState = RUN;
-            //    playerAnims[RUN].isAnimating = true;
-
-            //    //Add acceleration to the player's current speed, but keep it within the limits of maxSpeed
-            //    playerSpeed.X += ACCEL;
-
-            //    //Change the speed limits and minimums based on whether a power-up has been picked up or not
-            //    if (isSpeedBoosted)
-            //    {
-            //        //With speed boost
-            //        playerSpeed.X = MathHelper.Clamp(playerSpeed.X, -maxBoostedSpeed, maxBoostedSpeed);
-            //    }
-            //    else
-            //    {
-            //        //Without speed boost
-            //        playerSpeed.X = MathHelper.Clamp(playerSpeed.X, -maxSpeed, maxSpeed);
-            //    }
-            //}
-            //else if (kb.IsKeyDown(Keys.Left) || kb.IsKeyDown(Keys.A))
-            //{
-            //    //Change player's direction, state, and animation
-            //    dir = NEG;
-            //    playerState = RUN;
-            //    playerAnims[RUN].isAnimating = true;
-
-            //    //Subtract acceleration to the player's current speed, but keep it within the limits of maxSpeed
-            //    playerSpeed.X -= ACCEL;
-
-            //    //Change the speed limits and minimums based on whether a power-up has been picked up or not
-            //    if (isSpeedBoosted)
-            //    {
-            //        //With speed boost
-            //        playerSpeed.X = MathHelper.Clamp(playerSpeed.X, -maxBoostedSpeed, maxBoostedSpeed);
-            //    }
-            //    else
-            //    {
-            //        //Without speed boost
-            //        playerSpeed.X = MathHelper.Clamp(playerSpeed.X, -maxSpeed, maxSpeed);
-            //    }
-            //}
-            //else
-            //{
-            //    //Only apply friction if player is on the ground and no input is given
-            //    if (grounded == true)
-            //    {
-            //        //Decelerate if no input for horizontal movement
-            //        playerSpeed.X += -Math.Sign(playerSpeed.X) * forces.X;
-
-            //        //If the player has decelerated below the tolerance amount, set the speed to 0
-            //        if (Math.Abs(playerSpeed.X) <= TOLERANCE)
-            //        {
-            //            //Change player state, animation, and speed
-            //            playerAnims[RUN].isAnimating = false;
-            //            playerState = IDLE;
-            //            playerSpeed.X = 0f;
-            //        }
-            //    }
-            //}
-
-            ////Jump if the player hits up key or w key and is on the ground
-            //if ((kb.IsKeyDown(Keys.Up) || kb.IsKeyDown(Keys.W)) && grounded == true)
-            //{
-            //    //Play a jump sound 
-            //    jumpSnd.CreateInstance().Play();
-
-            //    //Apply jump speed
-            //    playerSpeed.Y = jumpSpeed;
-
-            //    //Change player state and animation
-            //    playerState = JUMP;
-            //    playerAnims[JUMP].isAnimating = true;
             //}
 
             ////Only allow attack animation if the attack timer is active and the player has clicked
@@ -419,14 +387,6 @@ namespace PASS3
             //    isClicked = false;
             //}
 
-            ////Add gravity to the y component of the player's speed
-            //playerSpeed.Y += forces.Y;
-
-            ////Change the position of the player 
-            //playerPos.X += playerSpeed.X;
-            //playerPos.Y += playerSpeed.Y;
-            //playerAnims[playerState].destRec.X = (int)playerPos.X;
-            //playerAnims[playerState].destRec.Y = (int)playerPos.Y;
 
             ////Remove the enemy and its health bar if it is defeated
             //if (enemyHealth[EASY] <= 0)
@@ -456,14 +416,14 @@ namespace PASS3
         private void UpdatePause()
         {
             ////Change to the play screen if p key is pressed
-            //if (kb.IsKeyDown(Keys.P) && !prevKb.IsKeyDown(Keys.P))
-            //{
-            //    //Change to play screen
-            //    gameState = GAMEPLAY;
+            if (kb.IsKeyDown(Keys.P) && !prevKb.IsKeyDown(Keys.P))
+            {
+                //Change to play screen
+                gameState = GAMEPLAY;
 
-            //    //Resume music
-            //    MediaPlayer.Resume();
-            //}
+                //Resume music
+                //MediaPlayer.Resume();
+            }
         }
 
         //Pre: None
@@ -495,10 +455,15 @@ namespace PASS3
         //Desc: Draw the menu interface
         private void DrawMenu()
         {
-            ////Display background
-            //spriteBatch.Draw(bgImgs[MENU], bgRecs[MENU], Color.White);
+            //Display background
+            spriteBatch.Draw(bgImgs[MENU_BG], bgRecs[MENU_BG], Color.White);
 
-            ////Display buttons
+            //Display buttons
+            for (int i = 0; i <= EXITBTN; i++)
+            {
+                btns[i].Draw(spriteBatch);
+            }
+
             //spriteBatch.Draw(btnImgs[PLAYBTN], btnRecs[PLAYBTN], Color.White);
             //spriteBatch.Draw(btnImgs[INSTBTN], btnRecs[INSTBTN], Color.White);
             //spriteBatch.Draw(btnImgs[HIGHSCOREBTN], btnRecs[HIGHSCOREBTN], Color.White);
@@ -514,8 +479,10 @@ namespace PASS3
         private void DrawInstructions()
         {
             ////Display background
-            //spriteBatch.Draw(bgImgs[MENUBG], bgRecs[MENUBG], Color.White);
+            spriteBatch.Draw(bgImgs[MAIN_GAME_BG], bgRecs[MENU_BG], Color.White);
 
+            //Display back button
+            btns[BACKBTN].Draw(spriteBatch);
             ////Display font
             //spriteBatch.Draw(bgImgs[INSTRUCTIONSBG], bgRecs[INSTRUCTIONSBG], Color.White);
 
@@ -529,9 +496,11 @@ namespace PASS3
         private void DrawHighscores()
         {
             //Display backgrounds
-            //spriteBatch.Draw(bgImgs[MENUBG], bgRecs[MENUBG], Color.White);
+            spriteBatch.Draw(bgImgs[MAIN_GAME_BG], bgRecs[MENU_BG], Color.White);
             //spriteBatch.Draw(bgImgs[HIGHSCOREBG], bgRecs[HIGHSCOREBG], Color.Gray);
 
+            //Display back button
+            btns[BACKBTN].Draw(spriteBatch);
             ////Display font
             //spriteBatch.Draw(highscoresImg, highscoresRec, Color.White);
             //spriteBatch.Draw(easyImg, easyRec, Color.White);
@@ -551,22 +520,15 @@ namespace PASS3
         private void DrawGame()
         {
             //Display background
-            //spriteBatch.Draw(bgImgs[GAMEBG], bgRecs[GAMEBG], Color.White);
+            spriteBatch.Draw(bgImgs[MAIN_GAME_BG], bgRecs[MAIN_GAME_BG], Color.White);
 
-        
-            ////Display the player based on the direction it is facing
-            //if (dir == POS)
-            //{
-            //    //If the player is facing right, do not flip the animation
-            //    playerAnims[playerState].Draw(spriteBatch, Color.White, Animation.FLIP_NONE);
-            //}
-            //else if (dir == NEG)
-            //{
-            //    //If the player is facing left, flip the animation
-            //    playerAnims[playerState].Draw(spriteBatch, Color.White, Animation.FLIP_HORIZONTAL);
-            //}
+            for (int i = 0; i < gameObjects.Count; i++)
+            {
+                gameObjects[i].Draw(spriteBatch);
+            }
 
-            
+            player.Draw(spriteBatch);
+
             ////Display clock 
             //spriteBatch.Draw(clockImg, clockRec, Color.White);
         }
@@ -576,8 +538,8 @@ namespace PASS3
         //Desc: Draw the pause screen and menu interface
         private void DrawPause()
         {
-            ////Display background
-            //spriteBatch.Draw(bgImgs[GAMEBG], bgRecs[GAMEBG], Color.White);
+            //Display background
+            spriteBatch.Draw(bgImgs[MAIN_GAME_BG], bgRecs[MAIN_GAME_BG], Color.White);
 
             ////Display title
             //spriteBatch.Draw(pausedImg, pausedRec, Color.White);
