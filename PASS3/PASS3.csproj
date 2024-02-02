@@ -54,10 +54,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ArrayQueue.cs" />
     <Compile Include="Game1.cs" />
+    <Compile Include="Node.cs" />
+    <Compile Include="ObjectQueue.cs" />
+    <Compile Include="Objects\Enemy.cs" />
+    <Compile Include="Objects\GameLogo.cs" />
     <Compile Include="Objects\GameObject.cs" />
+    <Compile Include="Objects\Launcher.cs" />
+    <Compile Include="Objects\MovingPlatform.cs" />
     <Compile Include="Objects\Platform.cs" />
-    <Compile Include="Player.cs" />
+    <Compile Include="Objects\Reactable.cs" />
+    <Compile Include="Objects\Skewer.cs" />
+    <Compile Include="Objects\Snowball.cs" />
+    <Compile Include="Objects\Spike.cs" />
+    <Compile Include="Player\MaingamePlayer.cs" />
+    <Compile Include="Player\MinigamePlayer.cs" />
+    <Compile Include="Player\Player.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

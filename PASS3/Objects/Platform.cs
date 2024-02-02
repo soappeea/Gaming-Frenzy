@@ -22,21 +22,18 @@ namespace PASS3
 {
     class Platform : GameObject
     {
-        //Store platform information
-        //private Texture2D img;
-        //private Rectangle rec;
+        //Store block rectangles
         private Rectangle[] blockRecs;
 
         /// <summary>
         /// Create an instance of platform
         /// </summary>
         /// <param name="blockImg">Platform's block image</param>
-        /// <param name="numBricks">Number of bricks of how long platform is</param>
         /// <param name="scale">Scale for platform</param>
         /// <param name="x">x-coordinate of platform</param>
         /// <param name="y">y-coordinate of platform</param>
         /// <param name="isHorizontal">Track if the platform is horizontal or vertical</param>
-        public Platform(Texture2D blockImg, int numBlocks, float scale, int x, int y, bool isHorizontal, float reboundScaler) : base(blockImg, new Vector2(x, y), scale, true, reboundScaler)
+        public Platform(Texture2D blockImg, int numBlocks, float scale, int x, int y, bool isHorizontal, float reboundScaler) : base(blockImg, new Vector2(x, y), scale, reboundScaler)
         {
             //Set platform image
             img = blockImg;
@@ -83,7 +80,5 @@ namespace PASS3
                 spriteBatch.Draw(img, blockRecs[i], Color.White);
             }
         }
-
-
     }
 }
